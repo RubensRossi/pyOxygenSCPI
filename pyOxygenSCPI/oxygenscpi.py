@@ -13,6 +13,9 @@ import datetime as dt
 log = logging.getLogger('oxygenscpi')
 
 def is_minimum_version(version, min_version):
+    """
+    Performs a version check
+    """
     if version[0] > min_version[0]:
         return True
     if version[0] < min_version[0]:
@@ -20,9 +23,12 @@ def is_minimum_version(version, min_version):
     return version[1] >= min_version[1]
 
 class OxygenSCPI:
+    """
+    Oxygen SCPI control class
+    """
     def __init__(self, ip_addr, tcp_port = 10001):
-        self._ipAddr = ip_addr
-        self._tcpPort = tcp_port
+        self._ip_addr = ip_addr
+        self._tcp_port = tcp_port
         self._CONN_NUM_TRY = 3
         self._CONN_TIMEOUT = 2
         self._CONN_MSG_DELAY = 0.5
@@ -33,6 +39,7 @@ class OxygenSCPI:
         self.channelList = []
         self._scpi_version = (1,5)
         self._value_dimension = None
+        self.elogChannelList = []
         self.DataStream = OxygenScpiDataStream(self)
 
     def connect(self):
@@ -42,13 +49,13 @@ class OxygenSCPI:
             #sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, 0)
             sock.settimeout(self._CONN_TIMEOUT)
             try:
-                sock.connect((self._ipAddr, self._tcpPort))
+                sock.connect((self._ip_addr, self._tcp_port))
                 self._sock = sock
                 self.getVersion()
                 return True
             except ConnectionRefusedError as msg:
                 template = "Connection to {!s}:{:d} refused: {!s}"
-                log.error(template.format(self._ipAddr, self._tcpPort, msg))
+                log.error(template.format(self._ip_addr, self._tcp_port, msg))
                 sock = None
                 return False
             except OSError as msg:
@@ -56,7 +63,7 @@ class OxygenSCPI:
                     continue
                 template = "Connection to {!s}:{:d} failed: {!s}"
                 sock = None
-                log.error(template.format(self._ipAddr, self._tcpPort, msg))
+                log.error(template.format(self._ip_addr, self._tcp_port, msg))
                 return False
         #if sock is not None:
         self._sock = sock
@@ -67,9 +74,9 @@ class OxygenSCPI:
             self._sock.shutdown(socket.SHUT_RDWR)
             self._sock.close()
         except OSError as msg:
-            log.error("Error Shutting Down: %s" %  (msg))
+            log.error("Error Shutting Down: %s", msg)
         except AttributeError as msg:
-            log.error("Error Shutting Down: %s" %  (msg))
+            log.error("Error Shutting Down: %s", msg)
         self._sock = None
 
     def _sendRaw(self, cmd):
@@ -101,8 +108,7 @@ class OxygenSCPI:
                     if len(data) < self._TCP_BLOCK_SIZE:
                         answerMsg += data
                         return answerMsg
-                    else:
-                        answerMsg += data
+                    answerMsg += data
             except OSError as msg:
                 self.disconnect()
                 template = "{!s}"
@@ -113,8 +119,7 @@ class OxygenSCPI:
         ret = self._askRaw('*IDN?')
         if type(ret) == bytes:
             return ret.decode().strip()
-        else:
-            return False
+        return False
 
     def getVersion(self):
         """
@@ -208,8 +213,7 @@ class OxygenSCPI:
             if is_minimum_version(self._scpi_version, (1,6)):
                 return self.getValueDimensions()
             return True
-        else:
-            return False
+        return False
 
     def setNumberChannels(self, number=None):
         if number is None:
@@ -283,8 +287,8 @@ class OxygenSCPI:
                         # Try to Parse DateTime "2017-10-10T12:16:52.33136+02:00"
                         # Variable lenght of Sub-Seconds
                         iso_ts = ''.join(data[idx].replace('"','').rsplit(':', 1))
-                        ts = dt.datetime.strptime(iso_ts, '%Y-%m-%dT%H:%M:%S.%f%z')
-                        values.append(ts)
+                        timestamp = dt.datetime.strptime(iso_ts, '%Y-%m-%dT%H:%M:%S.%f%z')
+                        values.append(timestamp)
                     except ValueError:
                         values.append(data[idx])
                     idx += 1
@@ -302,8 +306,8 @@ class OxygenSCPI:
                     # Try to Parse DateTime "2017-10-10T12:16:52.33136+02:00"
                     # Variable lenght of Sub-Seconds
                     iso_ts = ''.join(val.replace('"','').rsplit(':', 1))
-                    ts = dt.datetime.strptime(iso_ts, '%Y-%m-%dT%H:%M:%S.%f%z')
-                    values.append(ts)
+                    timestamp = dt.datetime.strptime(iso_ts, '%Y-%m-%dT%H:%M:%S.%f%z')
+                    values.append(timestamp)
                 except ValueError:
                     values.append(val)
 
@@ -390,8 +394,7 @@ class OxygenSCPI:
     def lockScreen(self, lock_state=True):
         if lock_state:
             return self._sendRaw('SYST:KLOCK ON')
-        else:
-            return self._sendRaw('SYST:KLOCK OFF')
+        return self._sendRaw('SYST:KLOCK OFF')
 
     def startAcquisition(self):
         try:
@@ -460,10 +463,9 @@ class OxygenSCPI:
     def setElogTimestamp(self, tsType='REL'):
         if tsType == 'REL':
             return self._sendRaw(':ELOG:TIM REL')
-        elif tsType == 'ABS':
+        if tsType == 'ABS':
             return self._sendRaw(':ELOG:TIM ABS')
-        else:
-            return self._sendRaw(':ELOG:TIM OFF')
+        return self._sendRaw(':ELOG:TIM OFF')
 
     def fetchElog(self):
         data = self._askRaw(':ELOG:FETCH?')
@@ -477,26 +479,29 @@ class OxygenSCPI:
         if ' ' in data:
             data = data.split(' ')[1]
         data = data.split(',')
-        numCh = len(self.elogChannelList)+1
-        #print(len(data)/(1.0*numCh), data)
-        numItems = int(len(data)/numCh)
-        data = [data[i*numCh:i*numCh+numCh] for i in range(numItems)]
+        num_ch = len(self.elogChannelList)+1
+        #print(len(data)/(1.0*num_ch), data)
+        num_items = int(len(data)/num_ch)
+        data = [data[i*num_ch:i*num_ch+num_ch] for i in range(num_items)]
         return data
 
     def addMarker(self, label, description=None, time=None):
         if description is None and time is None:
             return self._sendRaw(':MARK:ADD "{:s}"'.format(label))
-        elif description is None:
+        if description is None:
             return self._sendRaw(':MARK:ADD "{:s}",{:f}'.format(label, time))
-        elif time is None:
+        if time is None:
             return self._sendRaw(':MARK:ADD "{:s}","{:s}"'.format(label, description))
-        else:
-            return self._sendRaw(':MARK:ADD "{:s}","{:s}",{:f}'.format(label, description, time))
+        return self._sendRaw(':MARK:ADD "{:s}","{:s}",{:f}'.format(label, description, time))
 
 # TODO: Better add and remove data stream instances
 class OxygenScpiDataStream:
+    """
+    Datastream utility class
+    """
     def __init__(self, oxygen):
         self.oxygen = oxygen
+        self.channel_list = []
 
     def setItems(self, channel_names, stream_group=1):
         """ Set Datastream Items to be transfered
@@ -519,12 +524,11 @@ class OxygenScpiDataStream:
                 if channel_names[0] == 'NONE':
                     channel_names = []
                     log.warning('No Channel Set')
-            self.ChannelList = channel_names
+            self.channel_list = channel_names
             if len(channel_names) == 0:
                 return False
             return True
-        else:
-            return False
+        return False
 
     def setTcpPort(self, tcp_port, stream_group=1):
         self.oxygen._sendRaw(':DST:PORT{:d} {:d}'.format(stream_group, tcp_port))
