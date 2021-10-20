@@ -12,7 +12,7 @@ DEWETRON_IP_ADDR = 'localhost'
 
 mDevice = OxygenSCPI(ip_addr=DEWETRON_IP_ADDR)
 
-print("Device Name: {}".format(mDevice.getIdn()))
+print(f"Device Name: {mDevice.getIdn()}")
 
 # Set Tranfer Channels to be transfered on values query. Please make sure, that
 # Channels are available in Oxygen
@@ -24,9 +24,9 @@ mDevice.setNumberChannels()
 # Capture Values
 print("Requesting values...")
 values = mDevice.getValues()
-print("{:<15} {:<10}".format('Channel', 'Value'))
+print(f"{'Channel':<15} {'Value':<10}")
 for idx, channel in enumerate(mDevice.channelList):
-    print("{:<15} {:>10.3f}".format(channel, values[idx]))
+    print(f"{channel:<15} {values[idx]:>10.3f}")
 time.sleep(1)
 
 # Record Data File for 5 Seconds

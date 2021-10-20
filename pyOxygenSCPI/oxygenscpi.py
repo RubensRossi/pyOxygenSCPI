@@ -200,7 +200,7 @@ class OxygenSCPI:
                 log.debug('One Channel Set: {:s}'.format(channelNames[0]))
                 if channelNames[0] == 'NONE':
                     channelNames = []
-                    log.warn('No Channel Set')
+                    log.warning('No Channel Set')
             self.channelList = channelNames
             ret = self.setNumberChannels()
             if not ret:
@@ -237,7 +237,7 @@ class OxygenSCPI:
     def setValueMaxDimensions(self):
         if self.getValueDimensions():
             for idx in range(len(self._value_dimension)):
-                ret = self._sendRaw(':NUM:NORMAL:DIM{:d} MAX'.format(idx+1))
+                self._sendRaw(':NUM:NORMAL:DIM{:d} MAX'.format(idx+1))
         else:
             return False
         return self.getValueDimensions()
@@ -304,7 +304,7 @@ class OxygenSCPI:
                     iso_ts = ''.join(val.replace('"','').rsplit(':', 1))
                     ts = dt.datetime.strptime(iso_ts, '%Y-%m-%dT%H:%M:%S.%f%z')
                     values.append(ts)
-                except ValueError as e:
+                except ValueError:
                     values.append(val)
 
         return values
@@ -424,7 +424,7 @@ class OxygenSCPI:
             True if Suceeded, False if not
         """
         if not is_minimum_version(self._scpi_version, (1,7)):
-            log.warn('SCPI Version 1.7 or higher required')
+            log.warning('SCPI Version 1.7 or higher required')
             return False
 
         channel_list_str = '"'+'","'.join(channel_names)+'"'
@@ -441,7 +441,7 @@ class OxygenSCPI:
                 log.debug('One Channel Set: {:s}'.format(channel_names[0]))
                 if channel_names[0] == 'NONE':
                     channel_names = []
-                    log.warn('No Channel Set')
+                    log.warning('No Channel Set')
             self.elogChannelList = channel_names
             if len(channel_names) == 0:
                 return False
@@ -502,7 +502,7 @@ class OxygenScpiDataStream:
         """ Set Datastream Items to be transfered
         """
         if not is_minimum_version(self.oxygen._scpi_version, (1,7)):
-            log.warn('SCPI Version 1.7 or higher required')
+            log.warning('SCPI Version 1.7 or higher required')
             return False
         channel_list_str = '"'+'","'.join(channel_names)+'"'
         ret = self.oxygen._sendRaw(':DST:ITEM{:d} {:s}'.format(stream_group, channel_list_str))
@@ -518,7 +518,7 @@ class OxygenScpiDataStream:
                 log.debug('One Channel Set: {:s}'.format(channel_names[0]))
                 if channel_names[0] == 'NONE':
                     channel_names = []
-                    log.warn('No Channel Set')
+                    log.warning('No Channel Set')
             self.ChannelList = channel_names
             if len(channel_names) == 0:
                 return False
