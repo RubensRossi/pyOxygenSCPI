@@ -10,7 +10,7 @@ from pyOxygenSCPI import OxygenSCPI
 
 DEWETRON_IP_ADDR = 'localhost'
 
-mDevice = OxygenSCPI(DEWETRON_IP_ADDR)
+mDevice = OxygenSCPI(ip_addr=DEWETRON_IP_ADDR)
 
 print("Device Name: {}".format(mDevice.getIdn()))
 
