@@ -1,3 +1,8 @@
+"""
+Setup script for pyOxygenSCPI
+
+@author: Matthias Straka <matthias.straka@dewetron.com>
+"""
 import setuptools
 
 with open("README.md", "r", encoding="utf-8") as fh:
