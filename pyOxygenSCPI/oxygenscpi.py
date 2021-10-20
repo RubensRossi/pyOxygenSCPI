@@ -65,17 +65,17 @@ class OxygenSCPI(object):
         #if sock is not None:
         self._sock = sock
         #return False
-        
+
     def disconnect(self):
         try:
             self._sock.shutdown(socket.SHUT_RDWR)
             self._sock.close()
         except OSError as msg:
-                log.error("Error Shutting Down: %s" %  (msg))
+            log.error("Error Shutting Down: %s" %  (msg))
         except AttributeError as msg:
-                log.error("Error Shutting Down: %s" %  (msg))
+            log.error("Error Shutting Down: %s" %  (msg))
         self._sock = None
-        
+
     def _sendRaw(self, cmd):
         cmd += '\n'
         if self._sock is None:
@@ -90,7 +90,7 @@ class OxygenSCPI(object):
                 template = "{!s}"
                 log.error(template.format(msg))
         return False
-    
+
     def _askRaw(self, cmd):
         cmd += '\n'
         if self._sock is None:
@@ -112,14 +112,14 @@ class OxygenSCPI(object):
                 template = "{!s}"
                 log.error(template.format(msg))
         return False
-            
+
     def getIdn(self):
         ret = self._askRaw('*IDN?')
         if type(ret) == bytes:
             return ret.decode().strip()
         else:
             return False
-        
+
     def getVersion(self):
         """
         SCPI,"1999.0",RC_SCPI,"1.6",OXYGEN,"2.5.71"
@@ -136,26 +136,26 @@ class OxygenSCPI(object):
             self._scpi_version = (int(self._scpi_version[0]), int(self._scpi_version[1]))
         else:
             return False
-        
+
     def reset(self):
         self._sendRaw('*RST')
-        
+
     def headersOff(self):
         """
         Deactivate Headers on response
         """
         self._sendRaw(':COMM:HEAD OFF')
         self._headersActive = False
-        
+
     def setRate(self, rate=500):
         """Sets the Aggregation Rate of the measurement device
-        
-        This Function sets the aggregation rate (mean value) to the 
+
+        This Function sets the aggregation rate (mean value) to the
         specified value in milliseconds
-        
+
         Args:
             rate (int): interval in milliseconds
-                
+
         Returns:
             Nothing
         """
@@ -168,13 +168,13 @@ class OxygenSCPI(object):
         
     def loadSetup(self, setupName):
         """Loads the specified setup on the measurement device
-        
-        This Function loads the specified measurement setup (.dms) on 
+
+        This Function loads the specified measurement setup (.dms) on
         the measurement device
-        
+
         Args:
             setupName (str): Name or absolute path of the .dms file
-                
+
         Returns:
             Nothing
         """
@@ -186,13 +186,13 @@ class OxygenSCPI(object):
         
     def setTransferChannels(self, channelNames, includeRelTime=False, includeAbsTime=False):
         """Sets the channels to be transfered within the numeric system
-        
+
         This Function sets the channels to be transfered. This list must
         contain Oxygen channel names.
-        
+
         Args:
             channelNames (list of str): List of channel names
-                
+
         Returns:
             True if Suceeded, False if not
         """
@@ -238,7 +238,7 @@ class OxygenSCPI(object):
             return False
         
     def getValueDimensions(self):
-        """ Read the Dimension of the output 
+        """ Read the Dimension of the output
         Available since 1.6
         """
         ret = self._askRaw(':NUM:NORM:DIMS?')
@@ -254,7 +254,7 @@ class OxygenSCPI(object):
                 return False
             return True
         return False
-    
+
     def setValueMaxDimensions(self):
         if self.getValueDimensions():
             for idx in range(len(self._value_dimension)):
@@ -269,10 +269,10 @@ class OxygenSCPI(object):
         
     def getValues(self):
         """Queries the actual values from the numeric system
-        
+
         This Function queries the actual values from the channels defined in
         setTransferChannels.
-        
+
         Args:
             None
         Returns:
@@ -314,7 +314,7 @@ class OxygenSCPI(object):
                         values.append(data[idx])
                     idx += 1
                 else:
-                    values.append([float(val) for val in data[idx:idx+dim]])        
+                    values.append([float(val) for val in data[idx:idx+dim]])
                     idx += dim
         else:
             for val in data:
@@ -331,15 +331,15 @@ class OxygenSCPI(object):
                     values.append(ts)
                 except ValueError as e:
                     values.append(val)
-                    
+
         return values
-    
+
     def storeSetFileName(self, fileName):
         """Sets the file name for the subsequent storing (recording) action
-        
+
         This Function sets the file name for the subsequent storing action.
         The file will be stored in the default measurement folder on the device.
-        
+
         Args:
             File Name (str)
         Returns:
@@ -350,13 +350,13 @@ class OxygenSCPI(object):
             return state
         except OSError:
             return False
-        
+
     def storeStart(self):
         """Starts the storing (recording) action or resumes if it was paused.
-        
+
         This Function starts the storing action or resumes if it was paused
         The data will be stored in the file previous set with setStoreFileName.
-        
+
         Args:
             None
         Returns:
@@ -367,12 +367,12 @@ class OxygenSCPI(object):
             return state
         except OSError:
             return False
-        
+
     def storePause(self):
         """Pauses the storing (recording) action if it was started before.
-        
+
         This Function pauses the storing action.
-        
+
         Args:
             None
         Returns:
@@ -383,13 +383,13 @@ class OxygenSCPI(object):
             return state
         except OSError:
             return False
-        
+
     def storeStop(self):
         """Stops the storing (recording) action if it was started before.
-        
+
         This Function stops the storing action. The data file is now finished
         and can be used for analysis now.
-        
+
         Args:
             None
         Returns:
@@ -400,12 +400,12 @@ class OxygenSCPI(object):
             return state
         except OSError:
             return False
-        
+
     def getErrorSingle(self):
         """Query the first item in the error queue.
-        
+
         This Function queries the first item in the error queue (oldest one)
-        
+
         Args:
             None
         Returns:
@@ -416,7 +416,7 @@ class OxygenSCPI(object):
             return errorStr
         except OSError:
             return False
-        
+
     def lockScreen(self, lockState=True):
         if lockState:
             ret = self._sendRaw('SYST:KLOCK ON')
@@ -426,44 +426,44 @@ class OxygenSCPI(object):
             return True
         else:
             return False
-        
+
     def startAcquisition(self):
         try:
             state = self._sendRaw(':ACQU:START')
             return state
         except OSError:
             return False
-        
+
     def stopAcquisition(self):
         try:
             state = self._sendRaw(':ACQU:STOP')
             return state
         except OSError:
             return False
-        
+
     def restartAcquisition(self):
         try:
             state = self._sendRaw(':ACQU:RESTART')
             return state
         except OSError:
             return False
-        
+
     def setElogChannels(self, channelNames):
         """Sets the channels to be transfered within the ELOG system
-        
+
         This Function sets the channels to be transfered. This list must
         contain Oxygen channel names.
-        
+
         Args:
             channelNames (list of str): List of channel names
-                
+
         Returns:
             True if Suceeded, False if not
         """
         if not isMinimumVersion(self._scpi_version, (1,7)):
             log.warn('SCPI Version 1.7 or higher required')
             return False
-            
+
         channelListStr = '"'+'","'.join(channelNames)+'"'
         ret = self._sendRaw(':ELOG:ITEMS {:s}'.format(channelListStr))
         sleep(0.1)
@@ -537,7 +537,7 @@ class OxygenSCPI(object):
         numItems = int(len(data)/numCh)
         data = [data[i*numCh:i*numCh+numCh] for i in range(numItems)]
         return data
-    
+
     def addMarker(self, label, description=None, time=None):
         if description is None and time is None:
             ret = self._sendRaw(':MARK:ADD "{:s}"'.format(label))
