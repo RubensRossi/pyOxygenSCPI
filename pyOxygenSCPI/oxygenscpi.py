@@ -12,16 +12,13 @@ import datetime as dt
 
 log = logging.getLogger('oxygenscpi')
 
-def isMinimumVersion(version, minVersion):
-    if version[0] > minVersion[0]:
+def is_minimum_version(version, min_version):
+    if version[0] > min_version[0]:
         return True
-    elif version[0] < minVersion[0]:
+    elif version[0] < min_version[0]:
         return False
-    elif version[0] == minVersion[0]:
-        if version[1] >= minVersion[1]:
-            return True
-        else:
-            return False
+    elif version[0] == min_version[0]:
+        return version[1] >= min_version[1]
 
 class OxygenSCPI(object):
     def __init__(self, ipAddr, tcpPort = 10001):
@@ -218,12 +215,8 @@ class OxygenSCPI(object):
             ret = self.setNumberChannels()
             if not ret:
                 return False
-            if isMinimumVersion(self._scpi_version, (1,6)):
-                ret = self.getValueDimensions()
-                if ret:
-                    return True
-                else:
-                    return False
+            if is_minimum_version(self._scpi_version, (1,6)):
+                return self.getValueDimensions()
             return True
         else:
             return False
@@ -460,7 +453,7 @@ class OxygenSCPI(object):
         Returns:
             True if Suceeded, False if not
         """
-        if not isMinimumVersion(self._scpi_version, (1,7)):
+        if not is_minimum_version(self._scpi_version, (1,7)):
             log.warn('SCPI Version 1.7 or higher required')
             return False
 
@@ -560,7 +553,7 @@ class OxygenScpiDataStream(object):
     def setItems(self, channelNames, streamGroup=1):
         """ Set Datastream Items to be transfered
         """
-        if not isMinimumVersion(self.oxygen._scpi_version, (1,7)):
+        if not is_minimum_version(self.oxygen._scpi_version, (1,7)):
             log.warn('SCPI Version 1.7 or higher required')
             return False
         channelListStr = '"'+'","'.join(channelNames)+'"'
@@ -623,8 +616,7 @@ class OxygenScpiDataStream(object):
             ret = ret.decode().strip()
             ret = ret.replace(':DST:STAT ','')
             return ret
-        else:
-            return False
-        
+        return False
+
     def reset(self):
         self.oxygen._sendRaw(':DST:RESET')
