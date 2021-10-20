@@ -156,13 +156,8 @@ class OxygenSCPI(object):
         Returns:
             Nothing
         """
-        
-        ret = self._sendRaw(':RATE {:d}ms'.format(rate))
-        if ret:
-            return True
-        else:
-            return False
-        
+        return self._sendRaw(':RATE {:d}ms'.format(rate))
+
     def loadSetup(self, setupName):
         """Loads the specified setup on the measurement device
 
@@ -175,12 +170,8 @@ class OxygenSCPI(object):
         Returns:
             Nothing
         """
-        ret = self._sendRaw(':SETUP:LOAD "{:s}"'.format(setupName))
-        if ret:
-            return True
-        else:
-            return False
-        
+        return self._sendRaw(':SETUP:LOAD "{:s}"'.format(setupName))
+
     def setTransferChannels(self, channelNames, includeRelTime=False, includeAbsTime=False):
         """Sets the channels to be transfered within the numeric system
 
@@ -224,12 +215,8 @@ class OxygenSCPI(object):
     def setNumberChannels(self, number=None):
         if number is None:
             number = len(self.channelList)
-        ret = self._sendRaw(':NUM:NORMAL:NUMBER {:d}'.format(number))
-        if ret:
-            return True
-        else:
-            return False
-        
+        return self._sendRaw(':NUM:NORMAL:NUMBER {:d}'.format(number))
+
     def getValueDimensions(self):
         """ Read the Dimension of the output
         Available since 1.6
@@ -254,12 +241,8 @@ class OxygenSCPI(object):
                 ret = self._sendRaw(':NUM:NORMAL:DIM{:d} MAX'.format(idx+1))
         else:
             return False
-        if self.getValueDimensions():
-            return True
-        else:
-            return False
-                
-        
+        return self.getValueDimensions()
+
     def getValues(self):
         """Queries the actual values from the numeric system
 
@@ -339,8 +322,7 @@ class OxygenSCPI(object):
             Status (bool)
         """
         try:
-            state = self._sendRaw(':STOR:FILE:NAME "{:s}"'.format(fileName))
-            return state
+            return self._sendRaw(':STOR:FILE:NAME "{:s}"'.format(fileName))
         except OSError:
             return False
 
@@ -356,8 +338,7 @@ class OxygenSCPI(object):
             Status (bool)
         """
         try:
-            state = self._sendRaw(':STOR:START')
-            return state
+            return self._sendRaw(':STOR:START')
         except OSError:
             return False
 
@@ -372,8 +353,7 @@ class OxygenSCPI(object):
             Status (bool)
         """
         try:
-            state = self._sendRaw(':STOR:PAUSE')
-            return state
+            return self._sendRaw(':STOR:PAUSE')
         except OSError:
             return False
 
@@ -389,8 +369,7 @@ class OxygenSCPI(object):
             Status (bool)
         """
         try:
-            state = self._sendRaw(':STOR:STOP')
-            return state
+            return self._sendRaw(':STOR:STOP')
         except OSError:
             return False
 
@@ -405,39 +384,31 @@ class OxygenSCPI(object):
             Error Message (str)
         """
         try:
-            errorStr = self._askRaw(':SYST:ERR?')
-            return errorStr
+            return self._askRaw(':SYST:ERR?')
         except OSError:
             return False
 
     def lockScreen(self, lockState=True):
         if lockState:
-            ret = self._sendRaw('SYST:KLOCK ON')
+            return self._sendRaw('SYST:KLOCK ON')
         else:
-            ret = self._sendRaw('SYST:KLOCK OFF')
-        if ret:
-            return True
-        else:
-            return False
+            return self._sendRaw('SYST:KLOCK OFF')
 
     def startAcquisition(self):
         try:
-            state = self._sendRaw(':ACQU:START')
-            return state
+            return self._sendRaw(':ACQU:START')
         except OSError:
             return False
 
     def stopAcquisition(self):
         try:
-            state = self._sendRaw(':ACQU:STOP')
-            return state
+            return self._sendRaw(':ACQU:STOP')
         except OSError:
             return False
 
     def restartAcquisition(self):
         try:
-            state = self._sendRaw(':ACQU:RESTART')
-            return state
+            return self._sendRaw(':ACQU:RESTART')
         except OSError:
             return False
 
@@ -475,44 +446,28 @@ class OxygenSCPI(object):
             self.elogChannelList = channelNames
             if len(channelNames) == 0:
                 return False
-            else:
-                return True
-        else:
+            return True
+        return False
             return False 
-    
+        return False
+
     def startElog(self):
-        ret = self._sendRaw(':ELOG:START')
-        if ret:
-            return True
-        else:
-            return False
-        
+        return self._sendRaw(':ELOG:START')
+
     def setElogPeriod(self, period):
-        ret = self._sendRaw(':ELOG:PERIOD {:f}'.format(period))
-        if ret:
-            return True
-        else:
-            return False
-        
+        return self._sendRaw(':ELOG:PERIOD {:f}'.format(period))
+
     def stopElog(self):
-        ret = self._sendRaw(':ELOG:STOP')
-        if ret:
-            return True
-        else:
-            return False
-        
+        return self._sendRaw(':ELOG:STOP')
+
     def setElogTimestamp(self, tsType='REL'):
         if tsType == 'REL':
-            ret = self._sendRaw(':ELOG:TIM REL')
+            return self._sendRaw(':ELOG:TIM REL')
         elif tsType == 'ABS':
-            ret = self._sendRaw(':ELOG:TIM ABS')
+            return self._sendRaw(':ELOG:TIM ABS')
         else:
-            ret = self._sendRaw(':ELOG:TIM OFF')
-        if ret:
-            return True
-        else:
-            return False
-    
+            return self._sendRaw(':ELOG:TIM OFF')
+
     def fetchElog(self):
         data = self._askRaw(':ELOG:FETCH?')
         if type(data) is bytes:
@@ -533,23 +488,19 @@ class OxygenSCPI(object):
 
     def addMarker(self, label, description=None, time=None):
         if description is None and time is None:
-            ret = self._sendRaw(':MARK:ADD "{:s}"'.format(label))
+            return self._sendRaw(':MARK:ADD "{:s}"'.format(label))
         elif description is None:
-            ret = self._sendRaw(':MARK:ADD "{:s}",{:f}'.format(label, time))
+            return self._sendRaw(':MARK:ADD "{:s}",{:f}'.format(label, time))
         elif time is None:
-            ret = self._sendRaw(':MARK:ADD "{:s}","{:s}"'.format(label, description))
+            return self._sendRaw(':MARK:ADD "{:s}","{:s}"'.format(label, description))
         else:
-            ret = self._sendRaw(':MARK:ADD "{:s}","{:s}",{:f}'.format(label, description, time))
-        if ret:
-            return True
-        else:
-            return False
-    
-# TODO: Better add and remove data stream instances            
+            return self._sendRaw(':MARK:ADD "{:s}","{:s}",{:f}'.format(label, description, time))
+
+# TODO: Better add and remove data stream instances
 class OxygenScpiDataStream(object):
     def __init__(self, oxygen):
         self.oxygen = oxygen
-        
+
     def setItems(self, channelNames, streamGroup=1):
         """ Set Datastream Items to be transfered
         """
@@ -574,15 +525,14 @@ class OxygenScpiDataStream(object):
             self.ChannelList = channelNames
             if len(channelNames) == 0:
                 return False
-            else:
-                return True
+            return True
         else:
             return False
-        
+
     def setTcpPort(self, tcp_port, streamGroup=1):
         self.oxygen._sendRaw(':DST:PORT{:d} {:d}'.format(streamGroup, tcp_port))
         return True
-        
+
     def init(self, streamGroup=1):
         if streamGroup == 'all':
             self.oxygen._sendRaw(':DST:INIT {:s}'.format(streamGroup))
@@ -591,7 +541,7 @@ class OxygenScpiDataStream(object):
         else:
             return False
         return True
-    
+
     def start(self, streamGroup=1):
         if streamGroup == 'all':
             self.oxygen._sendRaw(':DST:START ALL'.format(streamGroup))
@@ -600,7 +550,7 @@ class OxygenScpiDataStream(object):
         else:
             return False
         return True
-    
+
     def stop(self, streamGroup=1):
         if streamGroup == 'all':
             self.oxygen._sendRaw(':DST:STOP ALL'.format(streamGroup))
@@ -609,7 +559,7 @@ class OxygenScpiDataStream(object):
         else:
             return False
         return True
-    
+
     def getState(self, streamGroup=1):
         ret = self.oxygen._askRaw(':DST:STAT{:d}?'.format(streamGroup))
         if isinstance(ret, bytes):
