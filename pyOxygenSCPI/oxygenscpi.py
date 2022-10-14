@@ -32,8 +32,8 @@ class OxygenSCPI:
         self._ip_addr = ip_addr
         self._tcp_port = tcp_port
         self._CONN_NUM_TRY = 3
-        self._CONN_TIMEOUT = 2
-        self._CONN_MSG_DELAY = 0.5
+        self._CONN_TIMEOUT = 10
+        self._CONN_MSG_DELAY = 0.05
         self._TCP_BLOCK_SIZE = 4096
         self._sock = None
         #self.connect()
@@ -54,6 +54,7 @@ class OxygenSCPI:
             try:
                 sock.connect((self._ip_addr, self._tcp_port))
                 self._sock = sock
+                self.headersOff()
                 self.getVersion()
                 return True
             except ConnectionRefusedError as msg:
@@ -68,9 +69,7 @@ class OxygenSCPI:
                 sock = None
                 log.error(template.format(self._ip_addr, self._tcp_port, msg))
                 return False
-        #if sock is not None:
         self._sock = sock
-        #return False
 
     def disconnect(self):
         try:
@@ -105,13 +104,11 @@ class OxygenSCPI:
             try:
                 self._sock.sendall(cmd.encode())
                 answerMsg = bytes(0)
-                # TODO: Use EOL Character to detect End of Message
                 while True:
                     data = self._sock.recv(self._TCP_BLOCK_SIZE)
-                    if len(data) < self._TCP_BLOCK_SIZE:
-                        answerMsg += data
-                        return answerMsg
                     answerMsg += data
+                    if data[-1:] == b'\n':
+                        return answerMsg
             except OSError as msg:
                 self.disconnect()
                 template = "{!s}"
@@ -130,12 +127,7 @@ class OxygenSCPI:
         """
         ret = self._askRaw('*VER?')
         if type(ret) == bytes:
-            ret = ret.decode().strip().split(' ')
-            if len(ret)>1:
-                ret = ''.join(ret[1:])
-                ret = ret.split(',')
-            else:
-                ret = ret[0].split(',')
+            ret = ret.decode().strip().split(',')
             self._scpi_version = ret[3].replace('"','').split('.')
             self._scpi_version = (int(self._scpi_version[0]), int(self._scpi_version[1]))
             return self._scpi_version
@@ -555,81 +547,124 @@ class OxygenSCPI:
         if time is None:
             return self._sendRaw(':MARK:ADD "{:s}","{:s}"'.format(label, description))
         return self._sendRaw(':MARK:ADD "{:s}","{:s}",{:f}'.format(label, description, time))
+    
+    def getChannelList(self):
+        ret = self._askRaw(':CHANNEL:NAMES?')
+        if ret:
+            ch_str_list = ret.decode().strip()
+            ch_list = [item.replace('(','').replace(')','').replace('"','').split(',') for item in ch_str_list.split('),(')]
+            ch_dict = {}
+            for ch in ch_list:
+                if ch[1] in ch_dict:
+                    print("Warning: Channel duplicate detected!")
+                ch_dict[ch[1]] = ch[0]
+            return ch_dict
+        else:
+            return None
+        
+    def getChannelPropValue(self, channel_id, prop):
+        if type(channel_id) == int:
+            channel_id = str(channel_id)
+        ret = self._askRaw(f':CHANNEL:PROP? "{channel_id:s}","{prop:s}"')
+        if ret:
+            return ret.decode().strip()
+        else:
+            return None
+        
+    def getChannelPropNames(self, channel_id):
+        if type(channel_id) == int:
+            channel_id = str(channel_id)
+        ret = self._askRaw(f':CHANNEL:ITEM{channel_id:s}:ATTR:NAMES?')
+        if ret:
+            return ret.decode().strip()
+        else:
+            return None
+        
+    def setChannelPropValue(self, channel_id, prop, val):
+        if type(channel_id) == int:
+            channel_id = str(channel_id)
+        self._sendRaw(f':CHANNEL:PROP "{channel_id:s}","{prop:s}","{val:s}"')
+        
 
-# TODO: Better add and remove data stream instances
-class OxygenScpiDataStream:
-    """
-    Datastream utility class
-    """
+# TODO: Better add and remove data stream instances            
+class OxygenScpiDataStream(object):
     def __init__(self, oxygen):
         self.oxygen = oxygen
-        self.channel_list = []
-
-    def setItems(self, channel_names, stream_group=1):
+        
+    def setItems(self, channelNames, streamGroup=1):
         """ Set Datastream Items to be transfered
         """
         if not is_minimum_version(self.oxygen._scpi_version, (1,7)):
-            log.warning('SCPI Version 1.7 or higher required')
+            log.warn('SCPI Version 1.7 or higher required')
             return False
-        channel_list_str = '"'+'","'.join(channel_names)+'"'
-        ret = self.oxygen._sendRaw(':DST:ITEM{:d} {:s}'.format(stream_group, channel_list_str))
+        channelListStr = '"'+'","'.join(channelNames)+'"'
+        ret = self.oxygen._sendRaw(':DST:ITEM{:d} {:s}'.format(streamGroup, channelListStr))
         sleep(0.1)
         # Read back actual set channel names
-        ret = self.oxygen._askRaw(':DST:ITEM{:d}?'.format(stream_group))
+        ret = self.oxygen._askRaw(':DST:ITEM{:d}?'.format(streamGroup))
         if isinstance(ret, bytes):
             ret = ret.decode().strip()
-            ret = ret.replace(':DST:ITEM{:d} '.format(stream_group),'')
-            channel_names = ret.split('","')
-            channel_names = [ch_name.replace('"','') for ch_name in channel_names]
-            if len(channel_names) == 1:
-                log.debug('One Channel Set: {:s}'.format(channel_names[0]))
-                if channel_names[0] == 'NONE':
-                    channel_names = []
-                    log.warning('No Channel Set')
-            self.channel_list = channel_names
-            if len(channel_names) == 0:
+            ret = ret.replace(':DST:ITEM{:d} '.format(streamGroup),'')
+            channelNames = ret.split('","')
+            channelNames = [chName.replace('"','') for chName in channelNames]
+            if len(channelNames) == 1:
+                log.debug('One Channel Set: {:s}'.format(channelNames[0]))
+                if channelNames[0] == 'NONE':
+                    channelNames = []
+                    log.warn('No Channel Set')
+            self.ChannelList = channelNames
+            if len(channelNames) == 0:
                 return False
-            return True
-        return False
-
-    def setTcpPort(self, tcp_port, stream_group=1):
-        self.oxygen._sendRaw(':DST:PORT{:d} {:d}'.format(stream_group, tcp_port))
+            else:
+                return True
+        else:
+            return False
+        
+    def setTcpPort(self, tcp_port, streamGroup=1):
+        self.oxygen._sendRaw(':DST:PORT{:d} {:d}'.format(streamGroup, tcp_port))
         return True
-
-    def init(self, stream_group=1):
-        if stream_group == 'all':
-            self.oxygen._sendRaw(':DST:INIT {:s}'.format(stream_group))
-        elif type(stream_group) == int:
-            self.oxygen._sendRaw(':DST:INIT {:d}'.format(stream_group))
+        
+    def init(self, streamGroup=1):
+        if streamGroup == 'all':
+            self.oxygen._sendRaw(':DST:INIT {:s}'.format(streamGroup))
+        elif type(streamGroup) == int:
+            self.oxygen._sendRaw(':DST:INIT {:d}'.format(streamGroup))
         else:
             return False
         return True
-
-    def start(self, stream_group=1):
-        if stream_group == 'all':
+    
+    def start(self, streamGroup=1):
+        if streamGroup == 'all':
             self.oxygen._sendRaw(':DST:START ALL')
-        elif type(stream_group) == int:
-            self.oxygen._sendRaw(':DST:START {:d}'.format(stream_group))
+        elif type(streamGroup) == int:
+            self.oxygen._sendRaw(':DST:START {:d}'.format(streamGroup))
         else:
             return False
         return True
-
-    def stop(self, stream_group=1):
-        if stream_group == 'all':
+    
+    def stop(self, streamGroup=1):
+        if streamGroup == 'all':
             self.oxygen._sendRaw(':DST:STOP ALL')
-        elif type(stream_group) == int:
-            self.oxygen._sendRaw(':DST:STOP {:d}'.format(stream_group))
+        elif type(streamGroup) == int:
+            self.oxygen._sendRaw(':DST:STOP {:d}'.format(streamGroup))
         else:
             return False
         return True
-
-    def getState(self, stream_group=1):
-        ret = self.oxygen._askRaw(':DST:STAT{:d}?'.format(stream_group))
+    
+    def getState(self, streamGroup=1):
+        ret = self.oxygen._askRaw(':DST:STAT{:d}?'.format(streamGroup))
         if isinstance(ret, bytes):
             ret = ret.decode().strip()
             ret = ret.replace(':DST:STAT ','')
             return ret
-        return False
-
+        else:
+            return False
+        
+    def setTriggered(self, streamGroup=1, value=True):
+        if value:
+            self.oxygen._sendRaw(':DST:TRIG{:d} ON'.format(streamGroup))
+        else:
+            self.oxygen._sendRaw(':DST:TRIG{:d} OFF'.format(streamGroup))
+        
     def reset(self):
         self.oxygen._sendRaw(':DST:RESET')
