@@ -5,8 +5,16 @@ pyOxygenSCPI is a Python wrapper for SCPI communication with Dewetron Oxygen
 
 # Installation
 
-TODO
+1. Clone GIT repository \
+`git clone https://github.com/DEWETRON/pyOxygenSCPI.git`
 
+2. Change to directory \
+`cd pyOxygenSCPI`
+
+3. Install \
+`python3 setup.py install`
+
+# About
 
 **For technical questions please contact:**
 
