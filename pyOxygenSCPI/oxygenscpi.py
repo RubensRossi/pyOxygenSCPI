@@ -32,7 +32,7 @@ class OxygenSCPI:
         self._ip_addr = ip_addr
         self._tcp_port = tcp_port
         self._CONN_NUM_TRY = 3
-        self._CONN_TIMEOUT = 10
+        self._CONN_TIMEOUT = 5
         self._CONN_MSG_DELAY = 0.05
         self._TCP_BLOCK_SIZE = 4096
         self._sock = None
@@ -446,6 +446,12 @@ class OxygenSCPI:
         except OSError:
             return False
 
+    def getErrorAll(self):
+        try:
+            return self._askRaw(':SYST:ERR:ALL?')
+        except OSError:
+            return None
+
     def lockScreen(self, lock_state=True):
         if lock_state:
             return self._sendRaw('SYST:KLOCK ON')
@@ -468,6 +474,17 @@ class OxygenSCPI:
             return self._sendRaw(':ACQU:RESTART')
         except OSError:
             return False
+
+    class AcquisitionState(Enum):
+        STARTED = "Started"
+        STOPPED = "Stopped"
+        WAITING_FOR_SYNC = "Waiting_for_sync"
+
+    def getAcquisitionState(self):
+        ret = self._askRaw(':ACQU:STAT?')
+        if isinstance(ret, bytes):
+            state = ret.decode().strip()
+            return self.AcquisitionState(state)
 
     def setElogChannels(self, channel_names):
         """Sets the channels to be transfered within the ELOG system
@@ -681,15 +698,21 @@ class OxygenScpiDataStream(object):
         self.oxygen._sendRaw(':DST:RESET')
 
 class OxygenChannelProperties(object):
-    """
-    Getter and Setter for Channel specific properties.
-    EXPERIMENTAL!!!
-    """
+    class OutputMode(Enum):
+        FUNCTION_GENERATOR = "FunctionGenerator"
+        CONSTANT = "ConstOutput"
+
     def __init__(self, oxygen):
         self.oxygen = oxygen
 
     def getChannelType(self, ch_id):
-        ret = self.oxygen.getChannelPropValue(ch_id, 'ChannelType').split(',')[2].replace(')','').replace('"','')
+        return self.oxygen.getChannelPropValue(ch_id, 'ChannelType').split(',')[2].replace(')','').replace('"','')
+
+    def getChannelSamplerate(self, ch_id):
+        try:
+            return float(self.oxygen.getChannelPropValue(ch_id, 'SampleRate').split(',')[1].replace(')',''))
+        except:
+           return None
 
     def getTrionSlotNumber(self, ch_id):
         try:
@@ -710,12 +733,22 @@ class OxygenChannelProperties(object):
             return ""
     
     def getChannelLPFilterFreq(self, ch_id):
+        """
+        Possible Values for ret: 
+        - NONE
+        - (SCALAR,20000.0,"Hz")
+        - (STRING,"Auto")
+        - (STRING,"Off")
+        """
         try: 
             ret = self.oxygen.getChannelPropValue(ch_id, 'LP_Filter_Freq')
-            if "," in ret:
-                return float(ret.split(",")[1].replace(")","").replace('"',''))
-            else:
-                return "AUTO"
+            if ret == "NONE":
+                return None
+            ret_parts = ret.replace("(","").replace(")","").split(",")
+            if ret_parts[0] == "STRING":
+                return ret_parts[1].replace('"',"")
+            elif ret_parts[0] == "SCALAR":
+                return float(ret_parts[1])
         except:
             return None
 
@@ -726,11 +759,20 @@ class OxygenChannelProperties(object):
         else:
             return True
 
+    def getTrionInputMode(self, ch_id):
+        try:
+            return self.oxygen.getChannelPropValue(ch_id, 'Mode')
+        except:
+            return ""
+
+    def setTrionInputMode(self, ch_id, input_mode):
+        self.oxygen.setChannelPropValue(ch_id, 'Mode', input_mode)
+
     def setTrionInputType(self, ch_id, input_type):
         self.oxygen.setChannelPropValue(ch_id, 'InputType', input_type)
 
-    def setTrionOutputMode(self, ch_id, output_mode):
-        self.oxygen.setChannelPropValue(ch_id, "Mode", "FunctionGenerator")
+    def setTrionOutputMode(self, ch_id, output_mode: OutputMode):
+        self.oxygen.setChannelPropValue(ch_id, "Mode", output_mode.value)
     
     def setTrionOutputFgenAmplitude(self, ch_id, amplitude, unit="V", amplitude_type="RMS"):
         self.oxygen.setChannelPropValue(ch_id, "AmplitudeValue", "RMS")
