@@ -702,6 +702,11 @@ class OxygenChannelProperties(object):
         FUNCTION_GENERATOR = "FunctionGenerator"
         CONSTANT = "ConstOutput"
 
+    class Waveform(Enum):
+        SINE = "Sine"
+        SQUARE = "Square"
+        TRIANGLE = "Triangle"
+
     def __init__(self, oxygen):
         self.oxygen = oxygen
 
@@ -716,13 +721,19 @@ class OxygenChannelProperties(object):
 
     def getTrionSlotNumber(self, ch_id):
         try:
-            return self.oxygen.getChannelPropValue(ch_id, 'ID:TRION/SlotNumber').split(',')[1].replace(')','')
+            return int(self.oxygen.getChannelPropValue(ch_id, 'ID:TRION/SlotNumber').split(',')[1].replace(')',''))
+        except:
+           return None
+
+    def getTrionBoardId(self, ch_id):
+        try:
+            return int(self.oxygen.getChannelPropValue(ch_id, 'ID:TRION/BoardId').split(',')[1].replace(')',''))
         except:
            return None
 
     def getTrionChannelIndex(self, ch_id):
         try:
-            return self.oxygen.getChannelPropValue(ch_id, 'ID:TRION/ChannelIndex').split(',')[1].replace(')','')
+            return int(self.oxygen.getChannelPropValue(ch_id, 'ID:TRION/ChannelIndex').split(',')[1].replace(')',''))
         except:
            return None
 
@@ -759,6 +770,13 @@ class OxygenChannelProperties(object):
         else:
             return True
 
+    def getChannelRange(self, ch_id):
+        try:
+            ret = float(self.oxygen.getChannelPropValue(ch_id, 'Range').split(',')[3].strip(')"'))
+        except:
+            ret = None
+        return ret
+
     def getTrionInputMode(self, ch_id):
         try:
             return self.oxygen.getChannelPropValue(ch_id, 'Mode')
@@ -777,6 +795,9 @@ class OxygenChannelProperties(object):
     def setTrionOutputFgenAmplitude(self, ch_id, amplitude, unit="V", amplitude_type="RMS"):
         self.oxygen.setChannelPropValue(ch_id, "AmplitudeValue", "RMS")
         self.oxygen.setChannelPropValue(ch_id, "TRION/Amplitude", f"{amplitude:f} {unit:s}")
+
+    def setTrionOutputFgenOffset(self, ch_id, offset, unit="V"):
+        self.oxygen.setChannelPropValue(ch_id, "TRION/Offset", f"{offset:f} {unit:s}")
     
     def setTrionOutputFgenFrequency(self, ch_id, frequency):
         self.oxygen.setChannelPropValue(ch_id, "TRION/Frequency", f"{frequency:f} Hz")
@@ -790,3 +811,6 @@ class OxygenChannelProperties(object):
     def setTrionOutputConstant(self, ch_id, amplitude, unit="V"):
         #measurementDevice.setChannelPropValue(ch_props["AO 7/1"]['id'], "Mode", "ConstOutput")
         self.oxygen.setChannelPropValue(ch_id, "TRION/SourceChannel_A_CONST/Const0", f"{amplitude:f} {unit:s}")
+
+    def setTrionOutputFgenWaveform(self, ch_id, waveform: Waveform):
+        self.oxygen.setChannelPropValue(ch_id, "TRION/WaveForm", waveform.value)
