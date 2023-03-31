@@ -791,9 +791,18 @@ class OxygenChannelProperties(object):
 
     def setTrionOutputMode(self, ch_id, output_mode: OutputMode):
         self.oxygen.setChannelPropValue(ch_id, "Mode", output_mode.value)
+
+    def getTrionLpFilterDelay(self, ch_id):
+        try:
+            ret = self.oxygen.getChannelPropValue(ch_id, 'LP_Filter_Delay')
+            print(ret)
+            ret = float(ret.split(',')[1].strip(')"'))/1e9 # Return in s instead of ns
+        except:
+            ret = 0.0
+        return ret
     
     def setTrionOutputFgenAmplitude(self, ch_id, amplitude, unit="V", amplitude_type="RMS"):
-        self.oxygen.setChannelPropValue(ch_id, "AmplitudeValue", "RMS")
+        self.oxygen.setChannelPropValue(ch_id, "AmplitudeValue", amplitude_type)
         self.oxygen.setChannelPropValue(ch_id, "TRION/Amplitude", f"{amplitude:f} {unit:s}")
 
     def setTrionOutputFgenOffset(self, ch_id, offset, unit="V"):
@@ -808,9 +817,9 @@ class OxygenChannelProperties(object):
         """
         self.oxygen.setChannelPropValue(ch_id, "TRION/OutputMode", resolution)
 
-    def setTrionOutputConstant(self, ch_id, amplitude, unit="V"):
+    def setTrionOutputConstant(self, ch_id, amplitude, unit="V", const_idx=0):
         #measurementDevice.setChannelPropValue(ch_props["AO 7/1"]['id'], "Mode", "ConstOutput")
-        self.oxygen.setChannelPropValue(ch_id, "TRION/SourceChannel_A_CONST/Const0", f"{amplitude:f} {unit:s}")
+        self.oxygen.setChannelPropValue(ch_id, f"TRION/SourceChannel_A_CONST/Const{const_idx:d}", f"{amplitude:f} {unit:s}")
 
     def setTrionOutputFgenWaveform(self, ch_id, waveform: Waveform):
         self.oxygen.setChannelPropValue(ch_id, "TRION/WaveForm", waveform.value)
