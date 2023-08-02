@@ -28,11 +28,11 @@ class OxygenSCPI:
     """
     Oxygen SCPI control class
     """
-    def __init__(self, ip_addr, tcp_port = 10001):
+    def __init__(self, ip_addr, tcp_port = 10001, timeout = 5):
         self._ip_addr = ip_addr
         self._tcp_port = tcp_port
         self._CONN_NUM_TRY = 3
-        self._CONN_TIMEOUT = 5
+        self._CONN_TIMEOUT = timeout
         self._CONN_MSG_DELAY = 0.05
         self._TCP_BLOCK_SIZE = 4096
         self._sock = None
