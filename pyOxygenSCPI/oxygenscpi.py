@@ -50,7 +50,8 @@ class OxygenSCPI:
         for numTry in range(1, self._CONN_NUM_TRY+1):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 0)
-            #sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, 0)
+            # sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, 0)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.settimeout(self._CONN_TIMEOUT)
             try:
                 sock.connect((self._ip_addr, self._tcp_port))
